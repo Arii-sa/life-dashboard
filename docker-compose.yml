@@ -1,0 +1,89 @@
+version: '3.8'
+
+services:
+  # Next.js フロントエンド
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: life-dashboard-frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+    networks:
+      - life-dashboard-network
+
+  # Laravel バックエンド
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: life-dashboard-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/var/www/html
+    environment:
+      - APP_ENV=local
+      - APP_DEBUG=true
+      - DB_CONNECTION=mysql
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_DATABASE=life_dashboard
+      - DB_USERNAME=laravel
+      - DB_PASSWORD=secret
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - life-dashboard-network
+
+  # MySQL データベース
+  db:
+    image: mysql:8.0
+    container_name: life-dashboard-db
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_DATABASE=life_dashboard
+      - MYSQL_USER=laravel
+      - MYSQL_PASSWORD=secret
+      - MYSQL_ROOT_PASSWORD=rootsecret
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - life-dashboard-network
+
+  # phpMyAdmin（DB確認用）
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: life-dashboard-phpmyadmin
+    ports:
+      - "8080:80"
+    environment:
+      - PMA_HOST=db
+      - PMA_USER=laravel
+      - PMA_PASSWORD=secret
+    depends_on:
+      - db
+    networks:
+      - life-dashboard-network
+
+networks:
+  life-dashboard-network:
+    driver: bridge
+
+volumes:
+  db-data:

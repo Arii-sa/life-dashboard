@@ -1,0 +1,16 @@
+# Node
+frontend/node_modules/
+frontend/.next/
+frontend/.env.local
+
+# Laravel
+backend/vendor/
+backend/.env
+backend/storage/logs/*.log
+
+# Docker
+.env
+
+# OS
+.DS_Store
+Thumbs.db
