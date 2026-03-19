@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\TaskController;
 use Illuminate\Support\Facades\Route;
 
 // 認証不要
@@ -17,4 +18,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/profile',    [ProfileController::class, 'show']);
     Route::post('/profile',   [ProfileController::class, 'upsert']);
     Route::delete('/profile', [ProfileController::class, 'destroy']);
+
+    // フォルダ
+    Route::get('/folders',              [TaskController::class, 'getFolders']);
+    Route::post('/folders',             [TaskController::class, 'createFolder']);
+    Route::put('/folders/{folder}',     [TaskController::class, 'updateFolder']);
+    Route::delete('/folders/{folder}',  [TaskController::class, 'deleteFolder']);
+
+    // タスク
+    Route::get('/folders/{folder}/tasks',    [TaskController::class, 'getTasks']);
+    Route::post('/folders/{folder}/tasks',   [TaskController::class, 'createTask']);
+    Route::put('/tasks/{task}',              [TaskController::class, 'updateTask']);
+    Route::delete('/tasks/{task}',           [TaskController::class, 'deleteTask']);
 });
