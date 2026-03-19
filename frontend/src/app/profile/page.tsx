@@ -14,7 +14,7 @@ const THEME_COLORS = [
   { label: "レッド", value: "#EF4444" },
 ];
 export default function ProfilePage() {
-  const { user, loading } = useAuth();
+  const { user, loading, refreshProfile } = useAuth();
   const router = useRouter();
 
   const [username, setUsername] = useState("");
@@ -75,6 +75,7 @@ export default function ProfilePage() {
       await api.post("/api/profile", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
+      await refreshProfile();
       router.push("/calendar");
     } catch {
       setError("保存に失敗しました。");
