@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\TaskController;
+use App\Http\Controllers\Api\CalendarController;
 use Illuminate\Support\Facades\Route;
 
 // 認証不要
@@ -30,4 +31,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/folders/{folder}/tasks',   [TaskController::class, 'createTask']);
     Route::put('/tasks/{task}',              [TaskController::class, 'updateTask']);
     Route::delete('/tasks/{task}',           [TaskController::class, 'deleteTask']);
+
+    // カレンダー
+    Route::get('/calendar',                    [CalendarController::class, 'index']);
+    Route::post('/calendar',                   [CalendarController::class, 'store']);
+    Route::put('/calendar/{calendarEvent}',    [CalendarController::class, 'update']);
+    Route::delete('/calendar/{calendarEvent}', [CalendarController::class, 'destroy']);
 });
