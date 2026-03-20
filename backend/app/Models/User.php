@@ -56,4 +56,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(TaskFolder::class);
     }
+
+    public function calendarEvents()
+    {
+        return $this->hasMany(CalendarEvent::class);
+    }
 }
