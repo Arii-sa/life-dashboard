@@ -58,23 +58,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   // タイマーの状態をlocalStorageから復元
   useEffect(() => {
-    const savedElapsed = localStorage.getItem("timer_elapsed");
-    const savedIsRunning = localStorage.getItem("timer_is_running");
-    const savedStartedAt = localStorage.getItem("timer_started_at");
+    const restoreTimer = () => {
+      const savedElapsed = localStorage.getItem("timer_elapsed");
+      const savedIsRunning = localStorage.getItem("timer_is_running");
+      const savedStartedAt = localStorage.getItem("timer_started_at");
 
-    if (savedElapsed) {
-      let restoredElapsed = parseInt(savedElapsed);
+      if (savedElapsed) {
+        let restoredElapsed = parseInt(savedElapsed);
 
-      // 動いていた場合は経過時間を計算して加算
-      if (savedIsRunning === "true" && savedStartedAt) {
-        const startedAt = parseInt(savedStartedAt);
-        const additionalSeconds = Math.floor((Date.now() - startedAt) / 1000);
-        restoredElapsed += additionalSeconds;
-        setIsRunning(true);
+        if (savedIsRunning === "true" && savedStartedAt) {
+          const startedAt = parseInt(savedStartedAt);
+          const additionalSeconds = Math.floor((Date.now() - startedAt) / 1000);
+          restoredElapsed += additionalSeconds;
+          setIsRunning(true);
+        }
+
+        setElapsed(restoredElapsed);
       }
-
-      setElapsed(restoredElapsed);
-    }
+    };
+    restoreTimer();
   }, []);
 
   // タイマーが動いているときlocalStorageに保存
