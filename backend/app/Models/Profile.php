@@ -16,6 +16,8 @@ class Profile extends Model
         'goal',
         'memo',
         'theme_color',
+        'daily_goal',
+        'weekly_goal',
     ];
 
     public function user()

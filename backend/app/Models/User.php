@@ -61,4 +61,16 @@ class User extends Authenticatable
     {
         return $this->hasMany(CalendarEvent::class);
     }
+
+    public function studyRecords()
+    {
+        return $this->hasMany(StudyRecord::class);
+    }
+
+    public function badges()
+    {
+        return $this->belongsToMany(Badge::class, 'user_badges')
+            ->withPivot('earned_at')
+            ->withTimestamps();
+    }
 }
