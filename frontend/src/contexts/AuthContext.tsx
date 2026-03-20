@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useRef } from "react";
 import api from "@/lib/axios";
 import { useRouter } from "next/navigation";
 
@@ -23,6 +23,13 @@ type AuthContextType = {
   profile: Profile | null;
   themeColor: string;
   loading: boolean;
+  // タイマー
+  elapsed: number;
+  isRunning: boolean;
+  startTimer: () => void;
+  pauseTimer: () => void;
+  resetTimer: () => void;
+  // 認証
   register: (
     name: string,
     email: string,
@@ -42,9 +49,65 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [elapsed, setElapsed] = useState(0);
+  const [isRunning, setIsRunning] = useState(false);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const router = useRouter();
 
   const themeColor = profile?.theme_color || DEFAULT_COLOR;
+
+  // タイマーの状態をlocalStorageから復元
+  useEffect(() => {
+    const savedElapsed = localStorage.getItem("timer_elapsed");
+    const savedIsRunning = localStorage.getItem("timer_is_running");
+    const savedStartedAt = localStorage.getItem("timer_started_at");
+
+    if (savedElapsed) {
+      let restoredElapsed = parseInt(savedElapsed);
+
+      // 動いていた場合は経過時間を計算して加算
+      if (savedIsRunning === "true" && savedStartedAt) {
+        const startedAt = parseInt(savedStartedAt);
+        const additionalSeconds = Math.floor((Date.now() - startedAt) / 1000);
+        restoredElapsed += additionalSeconds;
+        setIsRunning(true);
+      }
+
+      setElapsed(restoredElapsed);
+    }
+  }, []);
+
+  // タイマーが動いているときlocalStorageに保存
+  useEffect(() => {
+    if (isRunning) {
+      intervalRef.current = setInterval(() => {
+        setElapsed((prev) => {
+          const next = prev + 1;
+          localStorage.setItem("timer_elapsed", String(next));
+          return next;
+        });
+      }, 1000);
+      localStorage.setItem("timer_is_running", "true");
+      localStorage.setItem("timer_started_at", String(Date.now()));
+    } else {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      localStorage.setItem("timer_is_running", "false");
+      localStorage.removeItem("timer_started_at");
+    }
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [isRunning]);
+
+  const startTimer = () => setIsRunning(true);
+  const pauseTimer = () => setIsRunning(false);
+  const resetTimer = () => {
+    setIsRunning(false);
+    setElapsed(0);
+    localStorage.removeItem("timer_elapsed");
+    localStorage.removeItem("timer_is_running");
+    localStorage.removeItem("timer_started_at");
+  };
 
   const fetchProfile = async () => {
     try {
@@ -101,12 +164,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       await api.post("/api/logout");
     } catch {
-      // エラーでも無視してログアウト処理を続行 ← ここがポイント
+      // エラーでも無視してログアウト処理を続行
     }
-    localStorage.removeItem("token"); // トークン削除
-    setUser(null); // ユーザー情報をリセット
-    setProfile(null); // プロフィールをリセット
-    router.push("/login"); // ログイン画面へ
+    // タイマーもリセット
+    setIsRunning(false);
+    setElapsed(0);
+    localStorage.removeItem("token");
+    localStorage.removeItem("timer_elapsed");
+    localStorage.removeItem("timer_is_running");
+    localStorage.removeItem("timer_started_at");
+    setUser(null);
+    setProfile(null);
+    router.push("/login");
   };
 
   const refreshProfile = async () => {
@@ -120,6 +189,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         profile,
         themeColor,
         loading,
+        elapsed,
+        isRunning,
+        startTimer,
+        pauseTimer,
+        resetTimer,
         register,
         login,
         logout,

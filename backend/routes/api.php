@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\TaskController;
 use App\Http\Controllers\Api\CalendarController;
+use App\Http\Controllers\Api\StudyController;
 use Illuminate\Support\Facades\Route;
 
 // 認証不要
@@ -37,4 +38,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/calendar',                   [CalendarController::class, 'store']);
     Route::put('/calendar/{calendarEvent}',    [CalendarController::class, 'update']);
     Route::delete('/calendar/{calendarEvent}', [CalendarController::class, 'destroy']);
+
+    // 学習
+    Route::get('/study',          [StudyController::class, 'index']);
+    Route::post('/study',         [StudyController::class, 'store']);
+    Route::get('/study/stats',    [StudyController::class, 'getWeeklyStats']);
+    Route::get('/study/goals',    [StudyController::class, 'getGoals']);
+    Route::put('/study/goals',    [StudyController::class, 'updateGoals']);
+    Route::get('/study/badges',   [StudyController::class, 'getBadges']);
 });
