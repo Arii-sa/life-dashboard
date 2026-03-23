@@ -126,7 +126,12 @@ export default function StudyPage() {
   );
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div
+      className="max-w-4xl mx-auto rounded-2xl p-6 space-y-6"
+      style={{
+        backgroundColor: `rgba(${parseInt(themeColor.slice(1, 3), 16)}, ${parseInt(themeColor.slice(3, 5), 16)}, ${parseInt(themeColor.slice(5, 7), 16)}, 0.07)`,
+      }}
+    >
       <h1
         className="text-4xl mb-4"
         style={{ fontFamily: "var(--font-dancing-script)", color: themeColor }}
@@ -161,180 +166,173 @@ export default function StudyPage() {
         </div>
       )}
 
-      <div
-        className="rounded-2xl p-6 space-y-6"
-        style={{
-          backgroundColor: `rgba(${parseInt(themeColor.slice(1, 3), 16)}, ${parseInt(themeColor.slice(3, 5), 16)}, ${parseInt(themeColor.slice(5, 7), 16)}, 0.07)`,
-        }}
-      >
-        <div className="flex gap-6">
-          {/* 目標設定（左半分） */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 w-1/2">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="font-bold text-gray-800">目標設定</h2>
+      <div className="flex gap-6">
+        {/* 目標設定（左半分） */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 w-1/2">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="font-bold text-gray-800">目標設定</h2>
+            <button
+              onClick={() => setShowGoalForm(!showGoalForm)}
+              className="text-sm px-3 py-1 rounded-lg"
+              style={{ color: themeColor }}
+            >
+              {showGoalForm ? "閉じる" : "編集"}
+            </button>
+          </div>
+
+          {showGoalForm ? (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  1日の目標（分）
+                </label>
+                <input
+                  type="number"
+                  value={dailyGoalInput}
+                  onChange={(e) => setDailyGoalInput(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none"
+                  min="1"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  1週間の目標（分）
+                </label>
+                <input
+                  type="number"
+                  value={weeklyGoalInput}
+                  onChange={(e) => setWeeklyGoalInput(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none"
+                  min="1"
+                />
+              </div>
               <button
-                onClick={() => setShowGoalForm(!showGoalForm)}
-                className="text-sm px-3 py-1 rounded-lg"
-                style={{ color: themeColor }}
+                onClick={handleUpdateGoals}
+                className="w-full text-white py-2 rounded-lg font-semibold"
+                style={{ backgroundColor: themeColor }}
               >
-                {showGoalForm ? "閉じる" : "編集"}
+                保存
               </button>
             </div>
+          ) : (
+            <div className="space-y-3">
+              <div>
+                <p className="text-sm text-gray-500">1日の目標</p>
+                <p className="font-bold text-gray-800">
+                  {formatDuration(goals.daily_goal)}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">1週間の目標</p>
+                <p className="font-bold text-gray-800">
+                  {formatDuration(goals.weekly_goal)}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
 
-            {showGoalForm ? (
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    1日の目標（分）
-                  </label>
-                  <input
-                    type="number"
-                    value={dailyGoalInput}
-                    onChange={(e) => setDailyGoalInput(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none"
-                    min="1"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    1週間の目標（分）
-                  </label>
-                  <input
-                    type="number"
-                    value={weeklyGoalInput}
-                    onChange={(e) => setWeeklyGoalInput(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none"
-                    min="1"
-                  />
-                </div>
+        {/* タイマー（右半分） */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 w-1/2 flex flex-col items-center justify-center text-center">
+          <div
+            className="text-5xl font-mono font-bold mb-6"
+            style={{ color: themeColor }}
+          >
+            {formatTime(elapsed)}
+          </div>
+
+          <div className="flex flex-col gap-3 w-full">
+            {!isRunning ? (
+              <button
+                onClick={startTimer} // ← 変更
+                className="text-white px-6 py-2 rounded-xl font-semibold transition opacity-90 hover:opacity-100"
+                style={{ backgroundColor: themeColor }}
+              >
+                ▶ スタート
+              </button>
+            ) : (
+              <button
+                onClick={pauseTimer} // ← 変更
+                className="bg-yellow-400 text-white px-6 py-2 rounded-xl font-semibold transition hover:bg-yellow-500"
+              >
+                ⏸ 一時停止
+              </button>
+            )}
+            {elapsed > 0 && !isRunning && (
+              <>
                 <button
-                  onClick={handleUpdateGoals}
-                  className="w-full text-white py-2 rounded-lg font-semibold"
+                  onClick={handleStop}
+                  className="text-white px-6 py-2 rounded-xl font-semibold transition"
                   style={{ backgroundColor: themeColor }}
                 >
-                  保存
+                  💾 記録する
                 </button>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <div>
-                  <p className="text-sm text-gray-500">1日の目標</p>
-                  <p className="font-bold text-gray-800">
-                    {formatDuration(goals.daily_goal)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">1週間の目標</p>
-                  <p className="font-bold text-gray-800">
-                    {formatDuration(goals.weekly_goal)}
-                  </p>
-                </div>
-              </div>
+                <button
+                  onClick={resetTimer} // ← 変更
+                  className="bg-gray-100 text-gray-600 px-6 py-2 rounded-xl font-semibold transition hover:bg-gray-200"
+                >
+                  リセット
+                </button>
+              </>
             )}
           </div>
-
-          {/* タイマー（右半分） */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 w-1/2 flex flex-col items-center justify-center text-center">
-            <div
-              className="text-5xl font-mono font-bold mb-6"
-              style={{ color: themeColor }}
-            >
-              {formatTime(elapsed)}
-            </div>
-
-            <div className="flex flex-col gap-3 w-full">
-              {!isRunning ? (
-                <button
-                  onClick={startTimer} // ← 変更
-                  className="text-white px-6 py-2 rounded-xl font-semibold transition opacity-90 hover:opacity-100"
-                  style={{ backgroundColor: themeColor }}
-                >
-                  ▶ スタート
-                </button>
-              ) : (
-                <button
-                  onClick={pauseTimer} // ← 変更
-                  className="bg-yellow-400 text-white px-6 py-2 rounded-xl font-semibold transition hover:bg-yellow-500"
-                >
-                  ⏸ 一時停止
-                </button>
-              )}
-              {elapsed > 0 && !isRunning && (
-                <>
-                  <button
-                    onClick={handleStop}
-                    className="text-white px-6 py-2 rounded-xl font-semibold transition"
-                    style={{ backgroundColor: themeColor }}
-                  >
-                    💾 記録する
-                  </button>
-                  <button
-                    onClick={resetTimer} // ← 変更
-                    className="bg-gray-100 text-gray-600 px-6 py-2 rounded-xl font-semibold transition hover:bg-gray-200"
-                  >
-                    リセット
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
         </div>
+      </div>
 
-        {/* 今日の進捗 */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          <div className="flex justify-between items-center mb-3">
-            <h2 className="font-bold text-gray-800">今日の学習</h2>
-            <span className="text-sm text-gray-500">
-              {formatDuration(stats.daily_total)} /{" "}
-              {formatDuration(goals.daily_goal)}
-            </span>
-          </div>
-          <div className="w-full bg-gray-100 rounded-full h-4">
-            <div
-              className="h-4 rounded-full transition-all duration-500"
-              style={{
-                width: `${dailyProgress}%`,
-                backgroundColor: themeColor,
-              }}
-            />
-          </div>
-          {dailyProgress >= 100 && (
-            <p
-              className="text-sm mt-2 font-semibold"
-              style={{ color: themeColor }}
-            >
-              🎉 今日の目標達成！
-            </p>
-          )}
+      {/* 今日の進捗 */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <div className="flex justify-between items-center mb-3">
+          <h2 className="font-bold text-gray-800">今日の学習</h2>
+          <span className="text-sm text-gray-500">
+            {formatDuration(stats.daily_total)} /{" "}
+            {formatDuration(goals.daily_goal)}
+          </span>
         </div>
+        <div className="w-full bg-gray-100 rounded-full h-4">
+          <div
+            className="h-4 rounded-full transition-all duration-500"
+            style={{
+              width: `${dailyProgress}%`,
+              backgroundColor: themeColor,
+            }}
+          />
+        </div>
+        {dailyProgress >= 100 && (
+          <p
+            className="text-sm mt-2 font-semibold"
+            style={{ color: themeColor }}
+          >
+            🎉 今日の目標達成！
+          </p>
+        )}
+      </div>
 
-        {/* 今週の進捗 */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          <div className="flex justify-between items-center mb-3">
-            <h2 className="font-bold text-gray-800">今週の学習</h2>
-            <span className="text-sm text-gray-500">
-              {formatDuration(stats.weekly_total)} /{" "}
-              {formatDuration(goals.weekly_goal)}
-            </span>
-          </div>
-          <div className="w-full bg-gray-100 rounded-full h-4">
-            <div
-              className="h-4 rounded-full transition-all duration-500"
-              style={{
-                width: `${weeklyProgress}%`,
-                backgroundColor: themeColor,
-              }}
-            />
-          </div>
-          {weeklyProgress >= 100 && (
-            <p
-              className="text-sm mt-2 font-semibold"
-              style={{ color: themeColor }}
-            >
-              🏆 今週の目標達成！
-            </p>
-          )}
+      {/* 今週の進捗 */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <div className="flex justify-between items-center mb-3">
+          <h2 className="font-bold text-gray-800">今週の学習</h2>
+          <span className="text-sm text-gray-500">
+            {formatDuration(stats.weekly_total)} /{" "}
+            {formatDuration(goals.weekly_goal)}
+          </span>
         </div>
+        <div className="w-full bg-gray-100 rounded-full h-4">
+          <div
+            className="h-4 rounded-full transition-all duration-500"
+            style={{
+              width: `${weeklyProgress}%`,
+              backgroundColor: themeColor,
+            }}
+          />
+        </div>
+        {weeklyProgress >= 100 && (
+          <p
+            className="text-sm mt-2 font-semibold"
+            style={{ color: themeColor }}
+          >
+            🏆 今週の目標達成！
+          </p>
+        )}
       </div>
     </div>
   );

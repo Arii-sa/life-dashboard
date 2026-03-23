@@ -105,9 +105,18 @@ export default function TasksPage() {
     );
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">タスク</h1>
-
+    <div
+      className="max-w-4xl mx-auto rounded-2xl p-6"
+      style={{
+        backgroundColor: `rgba(${parseInt(themeColor.slice(1, 3), 16)}, ${parseInt(themeColor.slice(3, 5), 16)}, ${parseInt(themeColor.slice(5, 7), 16)}, 0.07)`,
+      }}
+    >
+      <h1
+        className="text-4xl mb-4"
+        style={{ fontFamily: "var(--font-dancing-script)", color: themeColor }}
+      >
+        My Tasks
+      </h1>
       {/* フォルダ作成 */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6 space-y-3">
         <input

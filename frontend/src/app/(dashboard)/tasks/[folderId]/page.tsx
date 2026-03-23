@@ -112,12 +112,18 @@ export default function TaskDetailPage() {
     );
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div
+      className="max-w-4xl mx-auto rounded-2xl p-6"
+      style={{
+        backgroundColor: `rgba(${parseInt(themeColor.slice(1, 3), 16)}, ${parseInt(themeColor.slice(3, 5), 16)}, ${parseInt(themeColor.slice(5, 7), 16)}, 0.07)`,
+      }}
+    >
       {/* ヘッダー */}
       <div className="flex items-center gap-3 mb-6">
         <button
           onClick={() => router.push("/tasks")}
-          className="text-gray-400 hover:text-gray-600 transition"
+          className="transition font-medium"
+          style={{ color: themeColor }}
         >
           ← 戻る
         </button>
@@ -127,7 +133,7 @@ export default function TaskDetailPage() {
       </div>
 
       {/* タスク作成 */}
-      <div className="flex gap-2 mb-4">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-4 flex gap-2">
         <input
           type="text"
           value={newTitle}
@@ -165,7 +171,6 @@ export default function TaskDetailPage() {
       {/* タスク一覧 */}
       {filteredTasks.length === 0 ? (
         <div className="text-center text-gray-400 py-12">
-          <p className="text-4xl mb-3">✅</p>
           <p>タスクがありません</p>
         </div>
       ) : (
