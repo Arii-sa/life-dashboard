@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\TaskController;
 use App\Http\Controllers\Api\CalendarController;
 use App\Http\Controllers\Api\StudyController;
+use App\Http\Controllers\Api\DiaryController;
 use Illuminate\Support\Facades\Route;
 
 // 認証不要
@@ -46,4 +47,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/study/goals',    [StudyController::class, 'getGoals']);
     Route::put('/study/goals',    [StudyController::class, 'updateGoals']);
     Route::get('/study/badges',   [StudyController::class, 'getBadges']);
+
+    // 日記
+    Route::get('/diaries/dates',           [DiaryController::class, 'getDates']);
+    Route::get('/diaries/date/{date}',     [DiaryController::class, 'getByDate']);
+    Route::get('/diaries',                 [DiaryController::class, 'index']);
+    Route::post('/diaries',                [DiaryController::class, 'store']);
+    Route::put('/diaries/{diary}',         [DiaryController::class, 'update']);
+    Route::delete('/diaries/{diary}',      [DiaryController::class, 'destroy']);
+    Route::delete('/diary-images/{imageId}', [DiaryController::class, 'destroyImage']);
 });

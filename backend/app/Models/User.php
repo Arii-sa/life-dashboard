@@ -73,4 +73,9 @@ class User extends Authenticatable
             ->withPivot('earned_at')
             ->withTimestamps();
     }
+
+    public function diaries()
+    {
+        return $this->hasMany(Diary::class);
+    }
 }
