@@ -134,15 +134,15 @@ export default function CalendarPage() {
       const today = now.toISOString().split("T")[0];
       const currentTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 
-      events.forEach((event) => {
+      events.forEach((calEvent) => {
         if (
-          event.is_reminder &&
-          event.reminder_time &&
-          event.start_date === today &&
-          event.reminder_time.slice(0, 5) === currentTime
+          calEvent.is_reminder &&
+          calEvent.reminder_time &&
+          calEvent.start_date.slice(0, 10) === today &&
+          calEvent.reminder_time.slice(0, 5) === currentTime
         ) {
-          new Notification(`📅 ${event.title}`, {
-            body: event.memo || "予定の時間になりました！",
+          new Notification(`📅 ${calEvent.title}`, {
+            body: calEvent.memo || "予定の時間になりました！",
           });
         }
       });
@@ -184,8 +184,8 @@ export default function CalendarPage() {
     });
     setTitle(event.title);
     setMemo(event.memo || "");
-    setStartDate(event.start_date);
-    setEndDate(event.end_date || "");
+    setStartDate(event.start_date.slice(0, 10));
+    setEndDate(event.end_date ? event.end_date.slice(0, 10) : "");
     setIsReminder(event.is_reminder);
     setReminderTime(event.reminder_time?.slice(0, 5) || "");
   };
