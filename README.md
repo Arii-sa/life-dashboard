@@ -6,9 +6,10 @@
 
 > 現在ローカル環境のみで動作します。
 
-テストアカウント（セットアップ後に作成してください）:
+テストアカウント（セットアップ後に新規作成してください）:
 
-- Email: `test@example.com`
+- Username:`テストユーザー`
+- Email: `test123@example.com`
 - Password: `Password123!`
 
 ---
@@ -101,29 +102,19 @@ git clone https://github.com/Arii-sa/life-dashboard.git
 cd life-dashboard
 ```
 
-**② Next.jsプロジェクト作成（初回のみ）**
+**② Laravelの依存パッケージをインストール**
 
 ```bash
-cd frontend
-npx create-next-app@latest . --typescript --tailwind --eslint --app --src-dir --import-alias "@/*"
-cd ..
+docker compose run --rm backend composer install
 ```
 
-**③ Laravelプロジェクト作成（初回のみ）**
-
-```bash
-cd backend
-composer create-project laravel/laravel . "^11.0"
-cd ..
-```
-
-**④ Dockerを起動**
+**③ Dockerを起動**
 
 ```bash
 docker compose up -d --build
 ```
 
-**⑤ Laravelの初期設定**
+**④ Laravelの初期設定**
 
 ```bash
 docker exec -it life-dashboard-backend cp .env.example .env
@@ -133,7 +124,7 @@ docker exec -it life-dashboard-backend php artisan db:seed
 docker exec -it life-dashboard-backend php artisan storage:link
 ```
 
-**⑥ アクセス確認**
+**⑤ アクセス確認**
 
 | サービス        | URL                   |
 | --------------- | --------------------- |
