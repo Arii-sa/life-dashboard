@@ -1,38 +1,107 @@
 # 🏠 Life Dashboard
 
-生活管理SPAポートフォリオ
+生活全般を管理するSPAポートフォリオアプリです。
 
-## 技術スタック
+## 🌐 デモ
 
-| 項目 | 技術 |
-|------|------|
-| フロントエンド | Next.js 14 (App Router) + TypeScript |
-| スタイリング | Tailwind CSS |
-| バックエンド | Laravel 11 |
-| 認証 | Laravel Sanctum |
-| DB | MySQL 8.0 |
-| インフラ | Docker |
+> 現在ローカル環境のみで動作します。
 
-## 機能
+テストアカウント（セットアップ後に作成してください）:
 
-- 認証（新規登録・ログイン・ログアウト）
-- カレンダー＋リマインダー
-- タスクページ（フォルダ式Todoリスト）
-- 学習タイマー＋バッジシステム
-- マイページ（プロフィール・バッジ一覧）
+- Email: `test@example.com`
+- Password: `Password123!`
 
 ---
 
-## セットアップ手順
+## 🛠 使用技術
 
-### 1. リポジトリをクローン
+### フロントエンド
+
+| 技術                    | 用途              |
+| ----------------------- | ----------------- |
+| Next.js 14 (App Router) | SPAフレームワーク |
+| React 18                | UIライブラリ      |
+| TypeScript              | 型安全な開発      |
+| Tailwind CSS            | スタイリング      |
+| FullCalendar            | カレンダーUI      |
+| Swiper                  | 画像スライダー    |
+| Axios                   | API通信           |
+
+### バックエンド
+
+| 技術            | 用途               |
+| --------------- | ------------------ |
+| Laravel 11      | APIサーバー        |
+| PHP 8.4         | サーバーサイド言語 |
+| Laravel Sanctum | トークン認証       |
+| MySQL 8.0       | データベース       |
+
+### インフラ
+
+| 技術   | 用途                       |
+| ------ | -------------------------- |
+| Docker | 開発環境の統一             |
+| GitHub | バージョン管理・CI         |
+| Vercel | フロントエンドホスティング |
+
+---
+
+## ✨ 機能一覧
+
+### 🔐 認証
+
+- 新規登録・ログイン・ログアウト
+- Laravel Sanctumによるトークン認証
+- プロフィール設定（スキップ可）
+
+### 📅 カレンダー
+
+- 月表示カレンダー（FullCalendar）
+- 予定の追加・編集・削除・メモ
+- リマインダー機能（ブラウザ通知）
+- 日記機能（複数画像・スワイプ表示）
+
+### ✅ タスク管理
+
+- フォルダ式Todoリスト
+- フォルダに期限日設定・期限警告表示
+- タスクの完了・未完了切り替え
+- 済み/未フィルター・編集・削除
+
+### ⏱ 学習タイマー
+
+- カウントアップタイマー
+- 別ページに移動してもタイマー継続
+- ログアウト時に自動リセット
+- 1日・1週間の目標設定・進捗バー
+- 目標達成でバッジ獲得
+
+### 👤 マイページ
+
+- プロフィール編集（ユーザー名・アイコン・目標・一言メモ）
+- テーマカラー選択（6色・全ページに反映）
+- 獲得バッジ一覧
+
+---
+
+## 🚀 ローカル環境のセットアップ
+
+### 必要なもの
+
+- Docker Desktop
+- Git
+- Composer
+
+### 手順
+
+**① リポジトリをクローン**
 
 ```bash
-git clone https://github.com/あなたのユーザー名/life-dashboard.git
+git clone https://github.com/Arii-sa/life-dashboard.git
 cd life-dashboard
 ```
 
-### 2. Next.js プロジェクト作成（初回のみ）
+**② Next.jsプロジェクト作成（初回のみ）**
 
 ```bash
 cd frontend
@@ -40,7 +109,7 @@ npx create-next-app@latest . --typescript --tailwind --eslint --app --src-dir --
 cd ..
 ```
 
-### 3. Laravel プロジェクト作成（初回のみ）
+**③ Laravelプロジェクト作成（初回のみ）**
 
 ```bash
 cd backend
@@ -48,37 +117,86 @@ composer create-project laravel/laravel . "^11.0"
 cd ..
 ```
 
-### 4. Docker 起動
+**④ Dockerを起動**
 
 ```bash
-docker-compose up -d --build
+docker compose up -d --build
 ```
 
-### 5. Laravel 初期設定
+**⑤ Laravelの初期設定**
 
 ```bash
-# .env 設定
 docker exec -it life-dashboard-backend cp .env.example .env
 docker exec -it life-dashboard-backend php artisan key:generate
-
-# マイグレーション
 docker exec -it life-dashboard-backend php artisan migrate
+docker exec -it life-dashboard-backend php artisan db:seed
+docker exec -it life-dashboard-backend php artisan storage:link
 ```
 
-### 6. アクセス確認
+**⑥ アクセス確認**
 
-| サービス | URL |
-|----------|-----|
-| フロントエンド | http://localhost:3000 |
+| サービス        | URL                   |
+| --------------- | --------------------- |
+| フロントエンド  | http://localhost:3000 |
 | バックエンドAPI | http://localhost:8000 |
-| phpMyAdmin | http://localhost:8080 |
+| phpMyAdmin      | http://localhost:8080 |
 
 ---
 
-## ブランチ戦略
+## 📁 ディレクトリ構成
+
+```
+life-dashboard/
+├── frontend/          # Next.js
+│   └── src/
+│       ├── app/       # App Router（ページ）
+│       ├── components/# 共通コンポーネント
+│       ├── contexts/  # Context API（認証・テーマ・タイマー）
+│       └── lib/       # axios設定
+├── backend/           # Laravel
+│   ├── app/
+│   │   ├── Http/Controllers/Api/
+│   │   └── Models/
+│   ├── database/migrations/
+│   └── routes/api.php
+└── docker-compose.yml
+```
+
+---
+
+## 🎨 設計のポイント
+
+- **SPA設計**: Next.js App RouterによるSPA構成
+- **REST API**: LaravelによるRESTful API設計
+- **認証**: Laravel SanctumによるトークンベースのAPI認証
+- **状態管理**: React Context APIによるグローバル状態管理
+- **テーマ**: ユーザーごとのテーマカラーをContext経由で全体に反映
+- **タイマー永続化**: localStorageでタイマー状態を管理しページ遷移後も継続
+
+---
+
+## 🌿 ブランチ戦略
 
 ```
 main        本番用（動くものだけ）
-develop     開発用メインブランチ
-feature/*   各機能開発（例: feature/auth, feature/calendar）
+feature/*   各機能開発
 ```
+
+| ブランチ           | 内容                             |
+| ------------------ | -------------------------------- |
+| feature/auth       | 認証・プロフィール機能           |
+| feature/navigation | ナビゲーションバー・テーマカラー |
+| feature/task       | タスクページ                     |
+| feature/calendar   | カレンダー・リマインダー         |
+| feature/study      | 学習タイマー・バッジ             |
+| feature/mypage     | マイページ                       |
+| feature/diary      | 日記機能                         |
+| feature/design     | デザイン統一                     |
+
+---
+
+## 👩‍💻 開発者
+
+**Arii-sa**
+
+- GitHub: https://github.com/Arii-sa/life-dashboard.git
