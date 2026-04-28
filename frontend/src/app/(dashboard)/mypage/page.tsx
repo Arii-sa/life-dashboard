@@ -2,17 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import api from "@/lib/axios";
-
-type Badge = {
-  id: number;
-  name: string;
-  description: string;
-  icon: string;
-  pivot: {
-    earned_at: string;
-  };
-};
+import { useProfile } from "@/hooks/useProfile";
 
 const THEME_COLORS = [
   { label: "ブルー", value: "#3B82F6" },
@@ -32,6 +22,7 @@ const hexToRgba = (hex: string, alpha: number) => {
 
 export default function MyPage() {
   const { user, profile, themeColor, refreshProfile } = useAuth();
+  const { badges, saveProfile, deleteProfile } = useProfile();
 
   const [username, setUsername] = useState("");
   const [goal, setGoal] = useState("");
@@ -39,12 +30,11 @@ export default function MyPage() {
   const [selectedColor, setSelectedColor] = useState("#3B82F6");
   const [avatar, setAvatar] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-  const [badges, setBadges] = useState<Badge[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    const init = async () => {
+    const init = () => {
       if (profile) {
         setUsername(profile.username || "");
         setGoal(profile.goal || "");
@@ -53,12 +43,6 @@ export default function MyPage() {
         if (profile.avatar) {
           setAvatarPreview(`http://localhost:8000/storage/${profile.avatar}`);
         }
-      }
-      try {
-        const res = await api.get("/api/study/badges");
-        setBadges(res.data);
-      } catch {
-        console.error("バッジ取得エラー");
       }
     };
     init();
@@ -82,13 +66,9 @@ export default function MyPage() {
       formData.append("theme_color", selectedColor);
       if (avatar) formData.append("avatar", avatar);
 
-      await api.post("/api/profile", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      await saveProfile(formData);
       await refreshProfile();
       setIsEditing(false);
-    } catch {
-      console.error("保存エラー");
     } finally {
       setSaving(false);
     }
@@ -96,18 +76,14 @@ export default function MyPage() {
 
   const handleDelete = async () => {
     if (!confirm("プロフィールを削除しますか？")) return;
-    try {
-      await api.delete("/api/profile");
-      await refreshProfile();
-      setAvatarPreview(null);
-      setUsername("");
-      setGoal("");
-      setMemo("");
-      setSelectedColor("#3B82F6");
-      setIsEditing(false);
-    } catch {
-      console.error("削除エラー");
-    }
+    await deleteProfile();
+    await refreshProfile();
+    setAvatarPreview(null);
+    setUsername("");
+    setGoal("");
+    setMemo("");
+    setSelectedColor("#3B82F6");
+    setIsEditing(false);
   };
 
   return (
@@ -162,7 +138,6 @@ export default function MyPage() {
           </div>
         </div>
 
-        {/* 上段：アイコン + ユーザー名 横並び */}
         <div className="flex items-center gap-6 mb-6">
           <div className="flex flex-col items-center gap-2">
             <div
@@ -199,8 +174,6 @@ export default function MyPage() {
               </label>
             )}
           </div>
-
-          {/* ユーザー名（アイコンと同じ高さに合わせて大きく） */}
           <div className="flex-1">
             {isEditing ? (
               <input
@@ -218,9 +191,7 @@ export default function MyPage() {
           </div>
         </div>
 
-        {/* 下段：目標・一言メモ */}
         <div className="space-y-4">
-          {/* 目標 */}
           <div
             className="rounded-xl p-4"
             style={{ backgroundColor: hexToRgba(themeColor, 0.07) }}
@@ -244,7 +215,6 @@ export default function MyPage() {
             )}
           </div>
 
-          {/* 一言メモ */}
           <div
             className="rounded-xl p-4"
             style={{ backgroundColor: hexToRgba(themeColor, 0.07) }}
@@ -270,7 +240,6 @@ export default function MyPage() {
             )}
           </div>
 
-          {/* テーマカラー */}
           {isEditing && (
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-2">

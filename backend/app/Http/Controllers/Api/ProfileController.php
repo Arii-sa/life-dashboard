@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Profile\UpsertProfileRequest;
 use App\Models\Profile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -16,16 +17,8 @@ class ProfileController extends Controller
     }
 
     // プロフィール作成・更新
-    public function upsert(Request $request)
+    public function upsert(UpsertProfileRequest $request)
     {
-        $request->validate([
-            'username'    => 'nullable|string|max:255',
-            'goal'        => 'nullable|string|max:500',
-            'memo'        => 'nullable|string|max:500',
-            'theme_color' => 'nullable|string|max:7',
-            'avatar'      => 'nullable|image|max:2048',
-        ]);
-
         $data = $request->only(['username', 'goal', 'memo', 'theme_color']);
 
         // アイコン画像のアップロード処理

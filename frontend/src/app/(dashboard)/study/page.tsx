@@ -1,27 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import api from "@/lib/axios";
+import { useStudy, Badge } from "@/hooks/useStudy";
 
-type Badge = {
-  id: number;
-  name: string;
-  description: string;
-  icon: string;
-};
-
-type WeeklyStats = {
-  daily_total: number;
-  weekly_total: number;
-};
-
-type Goals = {
-  daily_goal: number;
-  weekly_goal: number;
-};
-
-// 秒を時間・分・秒に変換
 const formatTime = (seconds: number) => {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
@@ -29,7 +11,6 @@ const formatTime = (seconds: number) => {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 };
 
-// 秒を時間・分で表示
 const formatDuration = (seconds: number) => {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
@@ -39,81 +20,36 @@ const formatDuration = (seconds: number) => {
 
 export default function StudyPage() {
   const { themeColor, elapsed, isRunning, startTimer, pauseTimer, resetTimer } =
-    useAuth(); // ← 変更
+    useAuth();
+  const { stats, goals, saveRecord, updateGoals } = useStudy();
 
-  const [stats, setStats] = useState<WeeklyStats>({
-    daily_total: 0,
-    weekly_total: 0,
-  });
-  const [goals, setGoals] = useState<Goals>({
-    daily_goal: 3600,
-    weekly_goal: 18000,
-  });
   const [newBadges, setNewBadges] = useState<Badge[]>([]);
   const [showGoalForm, setShowGoalForm] = useState(false);
-  const [dailyGoalInput, setDailyGoalInput] = useState("60");
-  const [weeklyGoalInput, setWeeklyGoalInput] = useState("300");
+  const [dailyGoalInput, setDailyGoalInput] = useState(
+    String(goals.daily_goal / 60),
+  );
+  const [weeklyGoalInput, setWeeklyGoalInput] = useState(
+    String(goals.weekly_goal / 60),
+  );
 
-  const fetchStats = async () => {
-    try {
-      const [statsRes, goalsRes] = await Promise.all([
-        api.get("/api/study/stats"),
-        api.get("/api/study/goals"),
-      ]);
-      setStats(statsRes.data);
-      setGoals(goalsRes.data);
-      setDailyGoalInput(String(goalsRes.data.daily_goal / 60));
-      setWeeklyGoalInput(String(goalsRes.data.weekly_goal / 60));
-    } catch {
-      console.error("統計取得エラー");
-    }
-  };
-
-  useEffect(() => {
-    const init = async () => {
-      await fetchStats();
-    };
-    init();
-  }, []);
-
-  // タイマー停止＆記録保存
   const handleStop = async () => {
     if (elapsed < 60) {
       alert("1分以上学習してから記録してください！");
       return;
     }
-    pauseTimer(); // ← 変更
-
-    try {
-      const today = new Date().toISOString().split("T")[0];
-      const res = await api.post("/api/study", {
-        duration: elapsed,
-        study_date: today,
-      });
-
-      resetTimer(); // ← 変更
-      await fetchStats();
-
-      if (res.data.new_badges?.length > 0) {
-        setNewBadges(res.data.new_badges);
-      }
-    } catch {
-      console.error("記録保存エラー");
-    }
+    pauseTimer();
+    const today = new Date().toISOString().split("T")[0];
+    const badges = await saveRecord(elapsed, today);
+    resetTimer();
+    if (badges.length > 0) setNewBadges(badges);
   };
 
-  // 目標更新
   const handleUpdateGoals = async () => {
-    try {
-      await api.put("/api/study/goals", {
-        daily_goal: Number(dailyGoalInput) * 60,
-        weekly_goal: Number(weeklyGoalInput) * 60,
-      });
-      setShowGoalForm(false);
-      await fetchStats();
-    } catch {
-      console.error("目標更新エラー");
-    }
+    await updateGoals(
+      Number(dailyGoalInput) * 60,
+      Number(weeklyGoalInput) * 60,
+    );
+    setShowGoalForm(false);
   };
 
   const dailyProgress = Math.min(
@@ -139,10 +75,9 @@ export default function StudyPage() {
         Study Timer
       </h1>
 
-      {/* バッジ獲得通知 */}
       {newBadges.length > 0 && (
         <div
-          className="rounded-2xl p-4 text-white text-center mb-4"
+          className="rounded-2xl p-4 text-white text-center"
           style={{ backgroundColor: themeColor }}
         >
           <p className="text-lg font-bold mb-2">🎉 バッジを獲得しました！</p>
@@ -167,7 +102,6 @@ export default function StudyPage() {
       )}
 
       <div className="flex gap-6">
-        {/* 目標設定（左半分） */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 w-1/2">
           <div className="flex justify-between items-center mb-4">
             <h2 className="font-bold text-gray-800">目標設定</h2>
@@ -179,7 +113,6 @@ export default function StudyPage() {
               {showGoalForm ? "閉じる" : "編集"}
             </button>
           </div>
-
           {showGoalForm ? (
             <div className="space-y-4">
               <div>
@@ -232,7 +165,6 @@ export default function StudyPage() {
           )}
         </div>
 
-        {/* タイマー（右半分） */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 w-1/2 flex flex-col items-center justify-center text-center">
           <div
             className="text-5xl font-mono font-bold mb-6"
@@ -240,11 +172,10 @@ export default function StudyPage() {
           >
             {formatTime(elapsed)}
           </div>
-
           <div className="flex flex-col gap-3 w-full">
             {!isRunning ? (
               <button
-                onClick={startTimer} // ← 変更
+                onClick={startTimer}
                 className="text-white px-6 py-2 rounded-xl font-semibold transition opacity-90 hover:opacity-100"
                 style={{ backgroundColor: themeColor }}
               >
@@ -252,7 +183,7 @@ export default function StudyPage() {
               </button>
             ) : (
               <button
-                onClick={pauseTimer} // ← 変更
+                onClick={pauseTimer}
                 className="bg-yellow-400 text-white px-6 py-2 rounded-xl font-semibold transition hover:bg-yellow-500"
               >
                 ⏸ 一時停止
@@ -268,7 +199,7 @@ export default function StudyPage() {
                   💾 記録する
                 </button>
                 <button
-                  onClick={resetTimer} // ← 変更
+                  onClick={resetTimer}
                   className="bg-gray-100 text-gray-600 px-6 py-2 rounded-xl font-semibold transition hover:bg-gray-200"
                 >
                   リセット
@@ -279,7 +210,6 @@ export default function StudyPage() {
         </div>
       </div>
 
-      {/* 今日の進捗 */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
         <div className="flex justify-between items-center mb-3">
           <h2 className="font-bold text-gray-800">今日の学習</h2>
@@ -291,10 +221,7 @@ export default function StudyPage() {
         <div className="w-full bg-gray-100 rounded-full h-4">
           <div
             className="h-4 rounded-full transition-all duration-500"
-            style={{
-              width: `${dailyProgress}%`,
-              backgroundColor: themeColor,
-            }}
+            style={{ width: `${dailyProgress}%`, backgroundColor: themeColor }}
           />
         </div>
         {dailyProgress >= 100 && (
@@ -307,7 +234,6 @@ export default function StudyPage() {
         )}
       </div>
 
-      {/* 今週の進捗 */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
         <div className="flex justify-between items-center mb-3">
           <h2 className="font-bold text-gray-800">今週の学習</h2>
@@ -319,10 +245,7 @@ export default function StudyPage() {
         <div className="w-full bg-gray-100 rounded-full h-4">
           <div
             className="h-4 rounded-full transition-all duration-500"
-            style={{
-              width: `${weeklyProgress}%`,
-              backgroundColor: themeColor,
-            }}
+            style={{ width: `${weeklyProgress}%`, backgroundColor: themeColor }}
           />
         </div>
         {weeklyProgress >= 100 && (

@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Diary\StoreDiaryRequest;
+use App\Http\Requests\Diary\UpdateDiaryRequest;
 use App\Models\Diary;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -35,15 +37,8 @@ class DiaryController extends Controller
     }
 
     // 日記作成
-    public function store(Request $request)
+    public function store(StoreDiaryRequest $request)
     {
-        $request->validate([
-            'title'      => 'nullable|string|max:255',
-            'content'    => 'nullable|string',
-            'diary_date' => 'required|date',
-            'images.*'   => 'nullable|image|max:5120',
-        ]);
-
         $diary = $request->user()->diaries()->create([
             'title'      => $request->title,
             'content'    => $request->content,
@@ -65,17 +60,11 @@ class DiaryController extends Controller
     }
 
     // 日記更新
-    public function update(Request $request, Diary $diary)
+    public function update(UpdateDiaryRequest $request, Diary $diary)
     {
         if ($diary->user_id !== $request->user()->id) {
             return response()->json(['message' => '権限がありません'], 403);
         }
-
-        $request->validate([
-            'title'    => 'nullable|string|max:255',
-            'content'  => 'nullable|string',
-            'images.*' => 'nullable|image|max:5120',
-        ]);
 
         $diary->update([
             'title'   => $request->title,

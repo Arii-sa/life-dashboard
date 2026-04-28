@@ -3,6 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Task\CreateFolderRequest;
+use App\Http\Requests\Task\UpdateFolderRequest;
+use App\Http\Requests\Task\CreateTaskRequest;
+use App\Http\Requests\Task\UpdateTaskRequest;
 use App\Models\Task;
 use App\Models\TaskFolder;
 use Illuminate\Http\Request;
@@ -17,13 +21,8 @@ class TaskController extends Controller
     }
 
     // フォルダ作成
-    public function createFolder(Request $request)
+    public function createFolder(CreateFolderRequest $request)
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'due_date' => 'nullable|date', //
-        ]);
-
         $folder = $request->user()->taskFolders()->create([
             'name' => $request->name,
             'due_date' => $request->due_date,
@@ -33,16 +32,11 @@ class TaskController extends Controller
     }
 
     // フォルダ更新
-    public function updateFolder(Request $request, TaskFolder $folder)
+    public function updateFolder(UpdateFolderRequest $request, TaskFolder $folder)
     {
         if ($folder->user_id !== $request->user()->id) {
             return response()->json(['message' => '権限がありません'], 403);
         }
-
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'due_date' => 'nullable|date',
-        ]);
 
         $folder->update(['name' => $request->name,'due_date' => $request->due_date,]);
         return response()->json($folder);
@@ -71,15 +65,11 @@ class TaskController extends Controller
     }
 
     // タスク作成
-    public function createTask(Request $request, TaskFolder $folder)
+    public function createTask(CreateTaskRequest $request, TaskFolder $folder)
     {
         if ($folder->user_id !== $request->user()->id) {
             return response()->json(['message' => '権限がありません'], 403);
         }
-
-        $request->validate([
-            'title' => 'required|string|max:255',
-        ]);
 
         $task = $folder->tasks()->create([
             'user_id' => $request->user()->id,
@@ -91,16 +81,11 @@ class TaskController extends Controller
     }
 
     // タスク更新（タイトル変更・完了切り替え）
-    public function updateTask(Request $request, Task $task)
+    public function updateTask(UpdateTaskRequest $request, Task $task)
     {
         if ($task->user_id !== $request->user()->id) {
             return response()->json(['message' => '権限がありません'], 403);
         }
-
-        $request->validate([
-            'title'   => 'sometimes|string|max:255',
-            'is_done' => 'sometimes|boolean',
-        ]);
 
         $task->update($request->only(['title', 'is_done']));
         return response()->json($task);

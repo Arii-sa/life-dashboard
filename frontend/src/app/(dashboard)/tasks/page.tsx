@@ -1,18 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
-import api from "@/lib/axios";
+import { useTaskFolders } from "@/hooks/useTask";
 
-type TaskFolder = {
-  id: number;
-  name: string;
-  due_date: string | null;
-  created_at: string;
-};
-
-// 期限の状態を返す関数
 const getDueDateStatus = (dueDate: string | null) => {
   if (!dueDate) return null;
   const today = new Date();
@@ -21,7 +13,6 @@ const getDueDateStatus = (dueDate: string | null) => {
   const diffDays = Math.ceil(
     (due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
   );
-
   if (diffDays < 0) return { label: "期限切れ", color: "#EF4444" };
   if (diffDays === 0) return { label: "今日が期限！", color: "#F97316" };
   if (diffDays <= 3) return { label: `あと${diffDays}日`, color: "#F97316" };
@@ -31,72 +22,36 @@ const getDueDateStatus = (dueDate: string | null) => {
 export default function TasksPage() {
   const { themeColor } = useAuth();
   const router = useRouter();
+  const { folders, loading, createFolder, updateFolder, deleteFolder } =
+    useTaskFolders();
 
-  const [folders, setFolders] = useState<TaskFolder[]>([]);
   const [newFolderName, setNewFolderName] = useState("");
   const [newDueDate, setNewDueDate] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editingName, setEditingName] = useState("");
   const [editingDueDate, setEditingDueDate] = useState("");
-  const [loading, setLoading] = useState(true);
 
-  const fetchFolders = async () => {
-    try {
-      const res = await api.get("/api/folders");
-      setFolders(res.data);
-    } catch {
-      console.error("フォルダ取得エラー");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchFolders();
-  }, []);
-
-  const handleCreateFolder = async () => {
+  const handleCreate = async () => {
     if (!newFolderName.trim()) return;
-    try {
-      await api.post("/api/folders", {
-        name: newFolderName,
-        due_date: newDueDate || null,
-      });
-      setNewFolderName("");
-      setNewDueDate("");
-      fetchFolders();
-    } catch {
-      console.error("フォルダ作成エラー");
-    }
+    await createFolder(newFolderName, newDueDate);
+    setNewFolderName("");
+    setNewDueDate("");
   };
 
-  const handleDeleteFolder = async (id: number) => {
+  const handleUpdate = async (id: number) => {
+    if (!editingName.trim()) return;
+    await updateFolder(id, editingName, editingDueDate);
+    setEditingId(null);
+    setEditingName("");
+    setEditingDueDate("");
+  };
+
+  const handleDelete = async (id: number) => {
     if (
       !confirm("このフォルダを削除しますか？\n中のタスクも全て削除されます。")
     )
       return;
-    try {
-      await api.delete(`/api/folders/${id}`);
-      fetchFolders();
-    } catch {
-      console.error("フォルダ削除エラー");
-    }
-  };
-
-  const handleUpdateFolder = async (id: number) => {
-    if (!editingName.trim()) return;
-    try {
-      await api.put(`/api/folders/${id}`, {
-        name: editingName,
-        due_date: editingDueDate || null,
-      });
-      setEditingId(null);
-      setEditingName("");
-      setEditingDueDate("");
-      fetchFolders();
-    } catch {
-      console.error("フォルダ更新エラー");
-    }
+    await deleteFolder(id);
   };
 
   if (loading)
@@ -117,13 +72,13 @@ export default function TasksPage() {
       >
         My Tasks
       </h1>
-      {/* フォルダ作成 */}
+
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6 space-y-3">
         <input
           type="text"
           value={newFolderName}
           onChange={(e) => setNewFolderName(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleCreateFolder()}
+          onKeyDown={(e) => e.key === "Enter" && handleCreate()}
           className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2"
           placeholder="新しいフォルダ名を入力"
         />
@@ -138,7 +93,7 @@ export default function TasksPage() {
             className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2"
           />
           <button
-            onClick={handleCreateFolder}
+            onClick={handleCreate}
             className="text-white px-4 py-2 rounded-lg transition opacity-90 hover:opacity-100 whitespace-nowrap"
             style={{ backgroundColor: themeColor }}
           >
@@ -147,7 +102,6 @@ export default function TasksPage() {
         </div>
       </div>
 
-      {/* フォルダ一覧 */}
       {folders.length === 0 ? (
         <div className="text-center text-gray-400 py-12">
           <p className="text-4xl mb-3">📂</p>
@@ -166,7 +120,6 @@ export default function TasksPage() {
                 className="bg-white rounded-xl shadow-sm border border-gray-100 p-4"
               >
                 {editingId === folder.id ? (
-                  // 編集モード
                   <div className="space-y-2">
                     <input
                       type="text"
@@ -188,7 +141,7 @@ export default function TasksPage() {
                     </div>
                     <div className="flex gap-2">
                       <button
-                        onClick={() => handleUpdateFolder(folder.id)}
+                        onClick={() => handleUpdate(folder.id)}
                         className="text-white px-3 py-1 rounded-lg text-sm"
                         style={{ backgroundColor: themeColor }}
                       >
@@ -203,7 +156,6 @@ export default function TasksPage() {
                     </div>
                   </div>
                 ) : (
-                  // 通常モード
                   <div className="flex items-center gap-3">
                     <button
                       onClick={() => router.push(`/tasks/${folder.id}`)}
@@ -239,7 +191,7 @@ export default function TasksPage() {
                       ✏️
                     </button>
                     <button
-                      onClick={() => handleDeleteFolder(folder.id)}
+                      onClick={() => handleDelete(folder.id)}
                       className="text-gray-400 hover:text-red-500 px-2 py-1 rounded transition"
                     >
                       🗑️
