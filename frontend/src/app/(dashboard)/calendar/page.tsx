@@ -1,46 +1,20 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCalendar, CalendarEvent } from "@/hooks/useCalendar";
+import { useDiary, Diary } from "@/hooks/useDiary";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import jaLocale from "@fullcalendar/core/locales/ja";
-import api from "@/lib/axios";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Pagination, Navigation } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/pagination";
 import "swiper/css/navigation";
-
-type CalendarEvent = {
-  id: number;
-  title: string;
-  memo: string | null;
-  start_date: string;
-  end_date: string | null;
-  is_reminder: boolean;
-  reminder_time: string | null;
-};
-
-type Diary = {
-  id: number;
-  title: string | null;
-  content: string | null;
-  diary_date: string;
-  images: DiaryImage[];
-};
-
-type DiaryImage = {
-  id: number;
-  image_path: string;
-  order: number;
-};
-
-type DiaryDate = {
-  diary_date: string;
-  count: number;
-};
+import { useRef } from "react";
+import FullCalendarType from "@fullcalendar/react";
 
 type ModalType =
   | "select"
@@ -69,10 +43,20 @@ const hexToRgba = (hex: string, alpha: number) => {
 
 export default function CalendarPage() {
   const { themeColor } = useAuth();
-  const calendarRef = useRef<FullCalendar>(null);
+  const calendarRef = useRef<FullCalendarType>(null);
 
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [diaryDates, setDiaryDates] = useState<DiaryDate[]>([]);
+  const { events, createEvent, updateEvent, deleteEvent } = useCalendar();
+
+  const {
+    diaryDates,
+    fetchDiariesByDate,
+    createDiary,
+    updateDiary,
+    deleteDiary,
+    deleteDiaryImage,
+    fetchDiaryDates,
+  } = useDiary();
+
   const [modal, setModal] = useState<ModalState>({
     open: false,
     type: "select",
@@ -96,63 +80,27 @@ export default function CalendarPage() {
   const [diaryImages, setDiaryImages] = useState<File[]>([]);
   const [diaryImagePreviews, setDiaryImagePreviews] = useState<string[]>([]);
 
-  const fetchEvents = async () => {
-    try {
-      const res = await api.get("/api/calendar");
-      setEvents(res.data);
-    } catch {
-      console.error("イベント取得エラー");
-    }
+  const closeModal = () => {
+    setModal({
+      open: false,
+      type: "select",
+      date: "",
+      event: null,
+      diary: null,
+      diaries: [],
+    });
+    setTitle("");
+    setMemo("");
+    setStartDate("");
+    setEndDate("");
+    setIsReminder(false);
+    setReminderTime("");
+    setDiaryTitle("");
+    setDiaryContent("");
+    setDiaryImages([]);
+    setDiaryImagePreviews([]);
   };
 
-  const fetchDiaryDates = async () => {
-    try {
-      const res = await api.get("/api/diaries/dates");
-      setDiaryDates(res.data);
-    } catch {
-      console.error("日記日付取得エラー");
-    }
-  };
-
-  useEffect(() => {
-    const init = async () => {
-      await fetchEvents();
-      await fetchDiaryDates();
-    };
-    init();
-  }, []);
-
-  // リマインダーチェック
-  useEffect(() => {
-    if (!("Notification" in window)) return;
-    if (Notification.permission !== "granted") {
-      Notification.requestPermission();
-    }
-
-    const checkReminders = () => {
-      const now = new Date();
-      const today = now.toISOString().split("T")[0];
-      const currentTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-
-      events.forEach((calEvent) => {
-        if (
-          calEvent.is_reminder &&
-          calEvent.reminder_time &&
-          calEvent.start_date.slice(0, 10) === today &&
-          calEvent.reminder_time.slice(0, 5) === currentTime
-        ) {
-          new Notification(`📅 ${calEvent.title}`, {
-            body: calEvent.memo || "予定の時間になりました！",
-          });
-        }
-      });
-    };
-
-    const interval = setInterval(checkReminders, 60000);
-    return () => clearInterval(interval);
-  }, [events]);
-
-  // 日付クリック → 選択モーダル
   const handleDateClick = (info: { dateStr: string }) => {
     setModal({
       open: true,
@@ -164,7 +112,6 @@ export default function CalendarPage() {
     });
   };
 
-  // 予定クリック
   const handleEventClick = (info: {
     event: { id: string; extendedProps: Record<string, unknown> };
   }) => {
@@ -190,63 +137,44 @@ export default function CalendarPage() {
     setReminderTime(event.reminder_time?.slice(0, 5) || "");
   };
 
-  // 日記マークをクリック
   const handleDiaryDateClick = async (date: string) => {
-    try {
-      const res = await api.get(`/api/diaries/date/${date}`);
-      setModal({
-        open: true,
-        type: "diary_list",
-        date,
-        event: null,
-        diary: null,
-        diaries: res.data,
-      });
-    } catch {
-      console.error("日記取得エラー");
-    }
+    const diaries = await fetchDiariesByDate(date);
+    setModal({
+      open: true,
+      type: "diary_list",
+      date,
+      event: null,
+      diary: null,
+      diaries,
+    });
   };
 
-  // 予定保存
   const handleSaveEvent = async () => {
     if (!title.trim()) return;
-    try {
-      const data = {
-        title,
-        memo: memo || null,
-        start_date: startDate,
-        end_date: endDate || null,
-        is_reminder: isReminder,
-        reminder_time: isReminder ? reminderTime : null,
-      };
+    const data = {
+      title,
+      memo: memo || null,
+      start_date: startDate,
+      end_date: endDate || null,
+      is_reminder: isReminder,
+      reminder_time: isReminder ? reminderTime : null,
+    };
 
-      if (modal.type === "event_create") {
-        await api.post("/api/calendar", data);
-      } else if (modal.event) {
-        await api.put(`/api/calendar/${modal.event.id}`, data);
-      }
-
-      closeModal();
-      fetchEvents();
-    } catch {
-      console.error("保存エラー");
+    if (modal.type === "event_create") {
+      await createEvent(data);
+    } else if (modal.event) {
+      await updateEvent(modal.event.id, data);
     }
+    closeModal();
   };
 
-  // 予定削除
   const handleDeleteEvent = async () => {
     if (!modal.event) return;
     if (!confirm("この予定を削除しますか？")) return;
-    try {
-      await api.delete(`/api/calendar/${modal.event.id}`);
-      closeModal();
-      fetchEvents();
-    } catch {
-      console.error("削除エラー");
-    }
+    await deleteEvent(modal.event.id);
+    closeModal();
   };
 
-  // 日記画像選択
   const handleDiaryImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     setDiaryImages((prev) => [...prev, ...files]);
@@ -254,80 +182,37 @@ export default function CalendarPage() {
     setDiaryImagePreviews((prev) => [...prev, ...previews]);
   };
 
-  // 日記保存
   const handleSaveDiary = async () => {
-    try {
-      const formData = new FormData();
-      formData.append("diary_date", modal.date);
-      if (diaryTitle) formData.append("title", diaryTitle);
-      if (diaryContent) formData.append("content", diaryContent);
-      diaryImages.forEach((img) => formData.append("images[]", img));
+    const formData = new FormData();
+    formData.append("diary_date", modal.date);
+    if (diaryTitle) formData.append("title", diaryTitle);
+    if (diaryContent) formData.append("content", diaryContent);
+    diaryImages.forEach((img) => formData.append("images[]", img));
 
-      if (modal.type === "diary_create") {
-        await api.post("/api/diaries", formData, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
-      } else if (modal.diary) {
-        await api.put(`/api/diaries/${modal.diary.id}`, formData, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
-      }
-
-      closeModal();
-      fetchDiaryDates();
-    } catch {
-      console.error("日記保存エラー");
+    if (modal.type === "diary_create") {
+      await createDiary(formData);
+    } else if (modal.diary) {
+      await updateDiary(modal.diary.id, formData);
     }
+    closeModal();
   };
 
-  // 日記削除
   const handleDeleteDiary = async (diaryId: number) => {
     if (!confirm("この日記を削除しますか？")) return;
-    try {
-      await api.delete(`/api/diaries/${diaryId}`);
-      closeModal();
-      fetchDiaryDates();
-    } catch {
-      console.error("日記削除エラー");
-    }
+    await deleteDiary(diaryId);
+    closeModal();
   };
 
-  // 日記画像削除
   const handleDeleteDiaryImage = async (imageId: number) => {
-    try {
-      await api.delete(`/api/diary-images/${imageId}`);
-      if (modal.diary) {
-        const res = await api.get(`/api/diaries/date/${modal.date}`);
-        const updated = res.data.find((d: Diary) => d.id === modal.diary!.id);
-        setModal({ ...modal, diary: updated });
-      }
-    } catch {
-      console.error("画像削除エラー");
+    await deleteDiaryImage(imageId);
+    if (modal.diary) {
+      const updated = await fetchDiariesByDate(modal.date);
+      const updatedDiary = updated.find((d) => d.id === modal.diary!.id);
+      if (updatedDiary) setModal({ ...modal, diary: updatedDiary });
     }
+    await fetchDiaryDates();
   };
 
-  const closeModal = () => {
-    setModal({
-      open: false,
-      type: "select",
-      date: "",
-      event: null,
-      diary: null,
-      diaries: [],
-    });
-    setTitle("");
-    setMemo("");
-    setStartDate("");
-    setEndDate("");
-    setIsReminder(false);
-    setReminderTime("");
-    setDiaryTitle("");
-    setDiaryContent("");
-    setDiaryImages([]);
-    setDiaryImagePreviews([]);
-  };
-
-  // FullCalendar用イベント
   const calendarEvents = [
     ...events.map((e) => ({
       id: String(e.id),
@@ -383,15 +268,15 @@ export default function CalendarPage() {
         }
         .diary-swiper .swiper-button-next,
         .diary-swiper .swiper-button-prev {
-            width: 24px !important;
-            height: 24px !important;
-            background: rgba(255,255,255,0.7);
-            border-radius: 50%;
+          width: 24px !important;
+          height: 24px !important;
+          background: rgba(255,255,255,0.7);
+          border-radius: 50%;
         }
         .diary-swiper .swiper-button-next::after,
         .diary-swiper .swiper-button-prev::after {
-            font-size: 10px !important;
-            color: #333;
+          font-size: 10px !important;
+          color: #333;
         }
       `}</style>
 
@@ -413,11 +298,9 @@ export default function CalendarPage() {
         />
       </div>
 
-      {/* モーダル */}
       {modal.open && (
         <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
-            {/* 選択モーダル */}
             {modal.type === "select" && (
               <div>
                 <h2 className="text-lg font-bold text-gray-800 mb-2">
@@ -456,7 +339,6 @@ export default function CalendarPage() {
               </div>
             )}
 
-            {/* 予定作成・編集モーダル */}
             {(modal.type === "event_create" || modal.type === "event_edit") && (
               <div>
                 <h2 className="text-lg font-bold text-gray-800 mb-4">
@@ -564,7 +446,6 @@ export default function CalendarPage() {
               </div>
             )}
 
-            {/* 日記作成モーダル */}
             {(modal.type === "diary_create" || modal.type === "diary_edit") && (
               <div>
                 <h2 className="text-lg font-bold text-gray-800 mb-4">
@@ -602,8 +483,6 @@ export default function CalendarPage() {
                       autoFocus
                     />
                   </div>
-
-                  {/* 既存画像（編集時） */}
                   {modal.type === "diary_edit" &&
                     modal.diary &&
                     modal.diary.images.length > 0 && (
@@ -631,8 +510,6 @@ export default function CalendarPage() {
                         </div>
                       </div>
                     )}
-
-                  {/* 画像アップロード */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       画像を追加
@@ -691,7 +568,6 @@ export default function CalendarPage() {
               </div>
             )}
 
-            {/* 日記一覧モーダル */}
             {modal.type === "diary_list" && (
               <div>
                 <h2 className="text-lg font-bold text-gray-800 mb-4">
@@ -751,7 +627,6 @@ export default function CalendarPage() {
               </div>
             )}
 
-            {/* 日記詳細モーダル */}
             {modal.type === "diary_detail" && modal.diary && (
               <div>
                 <div className="flex justify-between items-start mb-4">
@@ -788,8 +663,6 @@ export default function CalendarPage() {
                     </button>
                   </div>
                 </div>
-
-                {/* 画像グリッド */}
                 {modal.diary.images.length > 0 && (
                   <div className="mb-4">
                     <Swiper
@@ -813,11 +686,9 @@ export default function CalendarPage() {
                     </Swiper>
                   </div>
                 )}
-
                 <p className="text-gray-700 whitespace-pre-wrap">
                   {modal.diary.content}
                 </p>
-
                 <button
                   onClick={() => setModal({ ...modal, type: "diary_list" })}
                   className="mt-6 w-full py-2 rounded-lg text-white"

@@ -1,20 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useParams, useRouter } from "next/navigation";
-import api from "@/lib/axios";
-
-type Task = {
-  id: number;
-  title: string;
-  is_done: boolean;
-};
-
-type TaskFolder = {
-  id: number;
-  name: string;
-};
+import { useTasks } from "@/hooks/useTask";
 
 export default function TaskDetailPage() {
   const { themeColor } = useAuth();
@@ -22,84 +11,32 @@ export default function TaskDetailPage() {
   const router = useRouter();
   const folderId = params.folderId as string;
 
-  const [folder, setFolder] = useState<TaskFolder | null>(null);
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const { tasks, folder, loading, createTask, updateTask, deleteTask } =
+    useTasks(folderId);
+
   const [newTitle, setNewTitle] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
   const [filter, setFilter] = useState<"all" | "todo" | "done">("all");
-  const [loading, setLoading] = useState(true);
 
-  // タスク一覧取得
-  const fetchTasks = async () => {
-    try {
-      const [folderRes, tasksRes] = await Promise.all([
-        api.get(`/api/folders`),
-        api.get(`/api/folders/${folderId}/tasks`),
-      ]);
-      const currentFolder = folderRes.data.find(
-        (f: TaskFolder) => f.id === Number(folderId),
-      );
-      setFolder(currentFolder || null);
-      setTasks(tasksRes.data);
-    } catch {
-      console.error("タスク取得エラー");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchTasks();
-  }, [folderId]);
-
-  // タスク作成
-  const handleCreateTask = async () => {
+  const handleCreate = async () => {
     if (!newTitle.trim()) return;
-    try {
-      await api.post(`/api/folders/${folderId}/tasks`, { title: newTitle });
-      setNewTitle("");
-      fetchTasks();
-    } catch {
-      console.error("タスク作成エラー");
-    }
+    await createTask(newTitle);
+    setNewTitle("");
   };
 
-  // 完了切り替え
-  const handleToggleDone = async (task: Task) => {
-    try {
-      await api.put(`/api/tasks/${task.id}`, { is_done: !task.is_done });
-      fetchTasks();
-    } catch {
-      console.error("タスク更新エラー");
-    }
-  };
-
-  // タスク名編集
-  const handleUpdateTask = async (id: number) => {
+  const handleUpdate = async (id: number) => {
     if (!editingTitle.trim()) return;
-    try {
-      await api.put(`/api/tasks/${id}`, { title: editingTitle });
-      setEditingId(null);
-      setEditingTitle("");
-      fetchTasks();
-    } catch {
-      console.error("タスク更新エラー");
-    }
+    await updateTask(id, { title: editingTitle });
+    setEditingId(null);
+    setEditingTitle("");
   };
 
-  // タスク削除
-  const handleDeleteTask = async (id: number) => {
+  const handleDelete = async (id: number) => {
     if (!confirm("このタスクを削除しますか？")) return;
-    try {
-      await api.delete(`/api/tasks/${id}`);
-      fetchTasks();
-    } catch {
-      console.error("タスク削除エラー");
-    }
+    await deleteTask(id);
   };
 
-  // フィルター
   const filteredTasks = tasks.filter((task) => {
     if (filter === "todo") return !task.is_done;
     if (filter === "done") return task.is_done;
@@ -118,7 +55,6 @@ export default function TaskDetailPage() {
         backgroundColor: `rgba(${parseInt(themeColor.slice(1, 3), 16)}, ${parseInt(themeColor.slice(3, 5), 16)}, ${parseInt(themeColor.slice(5, 7), 16)}, 0.07)`,
       }}
     >
-      {/* ヘッダー */}
       <div className="flex items-center gap-3 mb-6">
         <button
           onClick={() => router.push("/tasks")}
@@ -132,18 +68,17 @@ export default function TaskDetailPage() {
         </h1>
       </div>
 
-      {/* タスク作成 */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-4 flex gap-2">
         <input
           type="text"
           value={newTitle}
           onChange={(e) => setNewTitle(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleCreateTask()}
+          onKeyDown={(e) => e.key === "Enter" && handleCreate()}
           className="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2"
           placeholder="新しいタスクを入力"
         />
         <button
-          onClick={handleCreateTask}
+          onClick={handleCreate}
           className="text-white px-4 py-2 rounded-lg transition opacity-90 hover:opacity-100"
           style={{ backgroundColor: themeColor }}
         >
@@ -151,7 +86,6 @@ export default function TaskDetailPage() {
         </button>
       </div>
 
-      {/* フィルタータグ */}
       <div className="flex gap-2 mb-4">
         {(["all", "todo", "done"] as const).map((f) => (
           <button
@@ -168,9 +102,9 @@ export default function TaskDetailPage() {
         ))}
       </div>
 
-      {/* タスク一覧 */}
       {filteredTasks.length === 0 ? (
         <div className="text-center text-gray-400 py-12">
+          <p className="text-4xl mb-3">✅</p>
           <p>タスクがありません</p>
         </div>
       ) : (
@@ -181,20 +115,19 @@ export default function TaskDetailPage() {
               className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex items-center gap-3"
             >
               {editingId === task.id ? (
-                // 編集モード
                 <div className="flex-1 flex gap-2">
                   <input
                     type="text"
                     value={editingTitle}
                     onChange={(e) => setEditingTitle(e.target.value)}
                     onKeyDown={(e) =>
-                      e.key === "Enter" && handleUpdateTask(task.id)
+                      e.key === "Enter" && handleUpdate(task.id)
                     }
                     className="flex-1 border border-gray-300 rounded-lg px-3 py-1 focus:outline-none"
                     autoFocus
                   />
                   <button
-                    onClick={() => handleUpdateTask(task.id)}
+                    onClick={() => handleUpdate(task.id)}
                     className="text-white px-3 py-1 rounded-lg text-sm"
                     style={{ backgroundColor: themeColor }}
                   >
@@ -208,11 +141,11 @@ export default function TaskDetailPage() {
                   </button>
                 </div>
               ) : (
-                // 通常モード
                 <>
-                  {/* 完了チェックボックス */}
                   <button
-                    onClick={() => handleToggleDone(task)}
+                    onClick={() =>
+                      updateTask(task.id, { is_done: !task.is_done })
+                    }
                     className="w-6 h-6 rounded-full border-2 flex items-center justify-center transition flex-shrink-0"
                     style={{
                       borderColor: task.is_done ? themeColor : "#D1D5DB",
@@ -223,15 +156,11 @@ export default function TaskDetailPage() {
                       <span className="text-white text-xs">✓</span>
                     )}
                   </button>
-
-                  {/* タスク名 */}
                   <span
                     className={`flex-1 text-sm ${task.is_done ? "line-through text-gray-400" : "text-gray-700"}`}
                   >
                     {task.title}
                   </span>
-
-                  {/* 編集・削除 */}
                   <button
                     onClick={() => {
                       setEditingId(task.id);
@@ -242,7 +171,7 @@ export default function TaskDetailPage() {
                     ✏️
                   </button>
                   <button
-                    onClick={() => handleDeleteTask(task.id)}
+                    onClick={() => handleDelete(task.id)}
                     className="text-gray-400 hover:text-red-500 px-2 py-1 rounded transition"
                   >
                     🗑️
